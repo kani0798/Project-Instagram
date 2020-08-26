@@ -3,3 +3,5 @@ psycopg2-binary==2.8.5
 djangorestframework==3.11
 Pillow==7.1
 python-decouple
+djangorestframework-simplejwt
+drf-yasg
