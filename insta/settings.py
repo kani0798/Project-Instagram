@@ -147,6 +147,8 @@ EMAIL_PORT = 587
 EMAIL_HOST_USER = 'arkadiy2yakovlev@gmail.com'
 EMAIL_HOST_PASSWORD = 'Piter1703'
 
+AUTH_USER_MODEL = 'authentication.User'
+
 REST_FRAMEWORK = {
     'NON_FIELD_ERRORS_KEY': 'error',
     'DEFAULT_AUTHENTICATION_CLASSES': (

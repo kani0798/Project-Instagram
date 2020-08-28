@@ -10,13 +10,21 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Post, Comment
+from authentication.models import User
+from authentication.serializers import UserProfileSerializer
+from .models import Post, Comment, Hashtag
 from .permissions import IsPostAuthor, IsCommentAuthor
-from .serializers import PostSerializer, CommentSerializer
+from .serializers import PostSerializer, CommentSerializer, UserSerializer, HashtagSerializer
 
 
 class MyPaginations(PageNumberPagination):
-    page_size = 3
+    page_size = 5
+
+
+class ProfileViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated, ]
 
 
 class PostsViewSet(viewsets.ModelViewSet):
@@ -38,22 +46,20 @@ class PostsViewSet(viewsets.ModelViewSet):
             permissions = []
         return [permission() for permission in permissions]
 
-    @action(detail=False, methods=['get'])
-    def myposts(self, request, pk=None):
-        u = request.query_params.get('u')
-        queryset = self.get_queryset()
-        if u:
-            queryset = queryset.filter(user__username=u)
-        else:
-            queryset = queryset.filter(user=request.user)
-        serializer = PostSerializer(queryset, many=True, context={'request': request})
-        return Response(serializer.data, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=['get'])
     def search(self, request, pk=None):
         q = request.query_params.get('q')
-        queryset = self.get_queryset()
-        queryset = queryset.filter(user__username__icontains=q)
+        queryset = User.objects.all()
+        queryset = queryset.filter(username__icontains=q)
+        serializer = UserSerializer(queryset, many=True, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['get'])
+    def hash(self, request, pk=None):
+        h = request.query_params.get('h')
+        queryset = Post.objects.all()
+        queryset = queryset.filter(title__icontains='#'+h)
         serializer = PostSerializer(queryset, many=True, context={'request': request})
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -100,16 +106,28 @@ class GetLikers(APIView):
 
     def get(self, request, format=None, post_id=None):
         post = Post.objects.get(pk=post_id)
-        likers = post.likes.values_list('username', flat=True)
-        # print(likers)
-        return Response(list(likers))
+        likers = post.likes.all()
+        serializer = UserSerializer(likers, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class GetComments(APIView):
+
+    def get(self, request, format=None, post_id=None):
+        post = Post.objects.get(pk=post_id)
+        comments = Comment.objects.filter(post_id=post_id, parent__isnull=True)
+        serializer = CommentSerializer(comments, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class GetHashtagsView(generics.ListAPIView):
+    queryset = Hashtag.objects.all()
+    serializer_class = HashtagSerializer
 
 
 
 
 
-#TODO: Comment count, children and parent
-#TODO: Hashtags
 
 
 
