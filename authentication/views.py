@@ -1,15 +1,20 @@
+from django.contrib.auth import get_user_model
 from django.shortcuts import render
 from django.contrib.sites.shortcuts import get_current_site
 from django.urls import reverse
 from rest_framework import generics, status, views, permissions
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
 
-
-
-from .serializers import RegisterSerializer, EmailVerificationSerializer, LoginSerializer
+from main.models import Post
+from main.serializers import PostSerializer
+from main.views import MyPaginations
+from .serializers import RegisterSerializer, EmailVerificationSerializer, LoginSerializer, UserProfileSerializer, \
+    FollowSerializer
 from .models import User
 from .utils import Util
 from django.conf import settings
@@ -77,3 +82,75 @@ class LoginAPIView(generics.GenericAPIView):
         serializer.is_valid(raise_exception=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+
+class UserProfile(generics.RetrieveAPIView):
+    queryset = get_user_model().objects.all()
+    serializer_class = UserProfileSerializer
+    lookup_field = 'username'
+    permission_classes = [IsAuthenticated, ]
+
+
+class OwnProfile(APIView):
+    permission_classes = [IsAuthenticated, ]
+
+    def get(self, request, format=None, pk=None):
+        username = self.request.user.username
+        query = get_user_model().objects.get(username=username)
+        serializer = UserProfileSerializer(query)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class FeedsView(APIView):
+    permission_classes = [IsAuthenticated, ]
+    pagination_class = MyPaginations
+
+    def get(self, request, format=None, pk=None):
+        user = self.request.user
+        followings = user.followings.all()
+        print(followings)
+        posts = Post.objects.filter(user__in=followings)
+        serializer = PostSerializer(posts, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class FollowUserView(APIView):
+    permission_classes = [IsAuthenticated, ]
+
+    def get(self, request, format=None, username=None):
+        to_user = get_user_model().objects.get(username=username)
+        from_user = self.request.user
+        follow = None
+        if from_user != to_user:
+            if from_user in to_user.followers.all():
+                follow = False
+                from_user.followings.remove(to_user)
+                to_user.followers.remove(from_user)
+
+            else:
+                follow = True
+                from_user.followings.add(to_user)
+                to_user.followers.add(from_user)
+        else:
+            raise Exception('You cant follow yourself')
+        context = {'follow': follow}
+        return Response(context)
+
+
+class GetFollowersView(generics.ListAPIView):
+    serializer_class = FollowSerializer
+    permission_classes = [IsAuthenticated, ]
+
+    def get_queryset(self):
+        username = self.kwargs['username']
+        queryset = get_user_model().objects.get(username=username).followers.all()
+        return queryset
+
+
+class GetFollowingsView(generics.ListAPIView):
+    serializer_class = FollowSerializer
+    permission_classes = [IsAuthenticated, ]
+
+    def get_queryset(self):
+        username = self.kwargs['username']
+        queryset = get_user_model().objects.get(username=username).followings.all()
+        return queryset

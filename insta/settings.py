@@ -88,9 +88,9 @@ WSGI_APPLICATION = 'insta.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config('NAME'),
-        'USER': config('USER'),
-        'PASSWORD': config('PASSWORD'),
+        'NAME': 'insta_db1',
+        'USER': 'kani',
+        'PASSWORD': '1',
         'HOST': 'localhost',
         'PORT': 5432
     }
@@ -146,6 +146,8 @@ EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_HOST_USER = 'arkadiy2yakovlev@gmail.com'
 EMAIL_HOST_PASSWORD = 'Piter1703'
+
+AUTH_USER_MODEL = 'authentication.User'
 
 REST_FRAMEWORK = {
     'NON_FIELD_ERRORS_KEY': 'error',

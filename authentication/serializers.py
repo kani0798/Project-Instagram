@@ -1,4 +1,8 @@
+from django.contrib.auth import get_user_model
 from rest_framework import serializers
+
+from main.models import Post
+from main.serializers import PostSerializer
 from .models import User
 from django.contrib import auth
 from django.utils.text import gettext_lazy as _
@@ -67,4 +71,20 @@ class LoginSerializer(serializers.ModelSerializer):
         return super().validate(attrs)
 
 
+class UserProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = get_user_model()
+        fields = ['id', 'username', 'email', 'followers', 'followings', 'posts']
 
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        representation['posts'] = PostSerializer(instance.posts.all(), many=True, context=self.context).data
+        representation['followers'] = instance.followers.count()
+        representation['followings'] = instance.followings.count()
+        return representation
+
+
+class FollowSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = get_user_model()
+        fields = ['username']
